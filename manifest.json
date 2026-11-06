@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Tabloid",
+  "description": "A three-column RSS new tab: Portuguese news, music, tech.",
+  "version": "1.4.0",
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "permissions": [
+    "storage",
+    "favicon",
+    "geolocation"
+  ],
+  "host_permissions": [
+    "https://expresso.pt/*",
+    "https://*.expresso.pt/*",
+    "https://www.publico.pt/*",
+    "https://feeds.feedburner.com/*",
+    "https://www.stereogum.com/*",
+    "https://blitz.pt/*",
+    "https://*.blitz.pt/*",
+    "https://www.techmeme.com/*",
+    "https://techcrunch.com/*",
+    "https://api.open-meteo.com/*",
+    "https://api.bigdatacloud.net/*"
+  ],
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}
