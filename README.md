@@ -5,7 +5,7 @@ A Chrome new-tab page with three columns of RSS headlines and the local weather 
 | Column | Sources |
 |---|---|
 | Notícias | Expresso, Público |
-| Music | Stereogum (news), Blitz |
+| Music | Stereogum (news), Blitz, Consequence (news) |
 | Tech | Techmeme, TechCrunch |
 
 ## Install

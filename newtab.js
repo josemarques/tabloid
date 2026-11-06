@@ -1,4 +1,4 @@
-const CACHE_KEY = "feedCache";
+const CACHE_KEY = "feedCache-v2"; // bump when sources change to drop stale items
 const FILTER_KEY = "columnFilters";
 const READ_KEY = "readLinks";
 const MAX_READ = 3000;
@@ -57,9 +57,15 @@ function safeUrl(href, base) {
   } catch { return null; }
 }
 
-function parseFeed(xmlText, sourceName, feedUrl) {
-  const doc = new DOMParser().parseFromString(xmlText, "application/xml");
-  if (doc.getElementsByTagName("parsererror").length) throw new Error("Invalid XML");
+function parseFeed(xmlText, source, feedUrl) {
+  // Chrome's XML parser is strict: drop a BOM/whitespace before the XML
+  // declaration and control characters that some WordPress feeds emit.
+  const clean = xmlText.replace(/^[\s\uFEFF]+/, "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+  const doc = new DOMParser().parseFromString(clean, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) {
+    if (/^<!doctype html|^<html/i.test(clean)) throw new Error("Got a web page, not a feed");
+    throw new Error("Invalid XML");
+  }
 
   const rssItems = [...doc.getElementsByTagName("item")];
   const atomEntries = [...doc.getElementsByTagName("entry")];
@@ -75,7 +81,7 @@ function parseFeed(xmlText, sourceName, feedUrl) {
     const dateStr = textOf(el, "pubDate", "published", "updated", "dc:date");
     const time = Date.parse(dateStr);
     return {
-      source: sourceName,
+      source: source.name,
       title: stripHtml(textOf(el, "title")) || "(untitled)",
       link: safeUrl(link, feedUrl),
       summary: stripHtml(textOf(el, "description", "summary", "content")).slice(0, 280),
@@ -83,7 +89,12 @@ function parseFeed(xmlText, sourceName, feedUrl) {
     };
   }).filter((i) => i.link);
 
-  return items.slice(0, ITEMS_PER_SOURCE);
+  // `match` guards against a feed that redirects to another publication's feed.
+  const matching = source.match ? items.filter((i) => i.link.includes(source.match)) : items;
+  if (!matching.length) {
+    throw new Error(items.length ? `No "${source.match}" items` : "No items in feed");
+  }
+  return matching.slice(0, ITEMS_PER_SOURCE);
 }
 
 async function discoverFeed(siteUrl) {
@@ -101,19 +112,24 @@ async function loadSource(source) {
   // Try the last working URL first, then the configured list, then autodiscovery.
   const known = cache[source.name]?.url;
   const candidates = [...new Set([known, ...source.urls].filter(Boolean))];
-  let lastError;
+  const errors = [];
+  const describe = (e, url) => {
+    const msg = e.name === "AbortError" ? "Timed out" : e.message === "Failed to fetch" ? "Blocked or unreachable" : e.message;
+    return url ? `${msg} (${new URL(url).host}${new URL(url).pathname})` : msg;
+  };
   for (const url of candidates) {
     try {
-      return { items: parseFeed(await fetchText(url), source.name, url), url };
-    } catch (e) { lastError = e; }
+      return { items: parseFeed(await fetchText(url), source, url), url };
+    } catch (e) { errors.push(describe(e, url)); }
   }
   if (source.site) {
     try {
       const url = await discoverFeed(source.site);
-      return { items: parseFeed(await fetchText(url), source.name, url), url };
-    } catch (e) { lastError = e; }
+      return { items: parseFeed(await fetchText(url), source, url), url };
+    } catch (e) { errors.push(`autodiscovery: ${describe(e)}`); }
   }
-  throw lastError || new Error("Failed to load");
+  // Show every attempt so a broken source can be fixed from the error alone.
+  throw new Error(errors.join(" · ") || "Failed to load");
 }
 
 // ---------- Rendering ----------

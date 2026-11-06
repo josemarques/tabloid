@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Tabloid",
   "description": "A three-column RSS new tab: Portuguese news, music, tech.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
@@ -17,8 +17,9 @@
     "https://www.publico.pt/*",
     "https://feeds.feedburner.com/*",
     "https://www.stereogum.com/*",
-    "https://blitz.pt/*",
-    "https://*.blitz.pt/*",
+    "https://stereogum.com/*",
+    "https://consequence.net/*",
+    "https://www.consequence.net/*",
     "https://www.techmeme.com/*",
     "https://techcrunch.com/*",
     "https://api.open-meteo.com/*",

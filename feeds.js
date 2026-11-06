@@ -1,6 +1,7 @@
 // Edit this file to change columns or sources.
 // Each source lists feed URLs tried in order; `site` is used for
-// RSS autodiscovery if every URL fails.
+// RSS autodiscovery if every URL fails. Optional `match` keeps only
+// items whose link contains that text (for feeds shared between sites).
 const COLUMNS = [
   {
     title: "Notícias",
@@ -23,12 +24,28 @@ const COLUMNS = [
       {
         name: "Stereogum",
         site: "https://www.stereogum.com/",
-        urls: ["https://www.stereogum.com/category/news/feed/", "https://www.stereogum.com/feed/"]
+        urls: [
+          "https://www.stereogum.com/category/news/feed/",
+          "https://stereogum.com/category/news/feed/",
+          "https://www.stereogum.com/feed/"
+        ]
       },
       {
+        // Blitz now lives under expresso.pt/blitz; blitz.pt redirects to
+        // Expresso's main feed, so `match` filters out non-Blitz items.
         name: "Blitz",
-        site: "https://blitz.pt/",
-        urls: ["https://blitz.pt/rss/ultimas", "https://blitz.pt/rss"]
+        site: "https://expresso.pt/blitz",
+        match: "/blitz",
+        urls: [
+          "https://expresso.pt/rss/blitz",
+          "https://expresso.pt/blitz/rss",
+          "https://expresso.pt/rss/ultimas"
+        ]
+      },
+      {
+        name: "Consequence",
+        site: "https://consequence.net/",
+        urls: ["https://consequence.net/category/news/feed/", "https://consequence.net/feed/"]
       }
     ]
   },
