@@ -1,10 +1,12 @@
-# Push a tag like v1.5.0 to publish a release with a ready-to-load zip.
-# Release notes come from .github/release-notes/<tag>.md if it exists.
+# Publishes a release whenever manifest.json's version has no release yet.
+# To release: bump "version" in manifest.json, add
+# .github/release-notes/v<version>.md (optional), and push to main.
 name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,22 +17,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check manifest version matches tag
-        run: |
-          manifest="v$(jq -r .version manifest.json)"
-          if [ "$manifest" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::manifest.json is $manifest but tag is $GITHUB_REF_NAME"
-            exit 1
-          fi
+      - name: Read version
+        id: version
+        run: echo "tag=v$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Build zip
-        run: git archive --format=zip --prefix=tabloid/ -o "tabloid-$GITHUB_REF_NAME.zip" HEAD
-
-      - name: Create release
+      - name: Skip if already released
+        id: check
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          notes=".github/release-notes/$GITHUB_REF_NAME.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build zip and create release
+        if: steps.check.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git archive --format=zip --prefix=tabloid/ -o "tabloid-$TAG.zip" HEAD
+          notes=".github/release-notes/$TAG.md"
           if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
-          gh release create "$GITHUB_REF_NAME" "tabloid-$GITHUB_REF_NAME.zip" \
-            --title "Tabloid $GITHUB_REF_NAME" "$@"
+          gh release create "$TAG" "tabloid-$TAG.zip" --target "$GITHUB_SHA" \
+            --title "Tabloid $TAG" "$@"
